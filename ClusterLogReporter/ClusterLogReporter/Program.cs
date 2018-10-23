@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Data;
 using System.IO;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection;
+
 
 namespace ClusterLogReporter
 {
@@ -19,7 +23,7 @@ namespace ClusterLogReporter
 
             if (processArgs(args))
             {
-
+                
                 seekLogsInFolder(args);
 
             }
@@ -95,12 +99,68 @@ namespace ClusterLogReporter
 
         }
 
-        static void runTrimLogs()
+        static void runTrimLogs(string pathToFile, string logsRoot)
         {
+            string rootPath;
+            string newlogspath = (logsRoot + "\\"  + getCurrentNodeFromLog(pathToFile));
+            //mk dir
+            //move copy of our tool there
+            //process our log in that dir
+            //remove tool 
+            // getCurrentNodeFromLog(pathToFile);
+            try
+            {
+                if (!Directory.Exists(newlogspath))
+                {
+                    Directory.CreateDirectory(newlogspath);
+                }
+                else
+                {
+                    Directory.CreateDirectory(newlogspath + Random.);
+                }
+               
+                
+                File.Copy((logsRoot + "\\Trimlogs.exe"), (newlogspath + "\\Trimlogs.exe"),true);
+                ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
+                proc.CreateNoWindow = false;
+                proc.UseShellExecute = false;
+                proc.WorkingDirectory = newlogspath;
 
+                proc.Arguments = pathToFile;
+                Process.Start(proc).WaitForExit();
+                
+                File.Delete(newlogspath + "\\Trimlogs.exe");
+            }
+            catch (Exception)
+            {
 
+                throw;
+            }
+
+            
+
+            
 
         }
+
+        public static void ExtractSaveResource(string resource, string path)
+        {
+            Assembly currentAssembly = Assembly.GetExecutingAssembly();
+            string[] arrResources = currentAssembly.GetManifestResourceNames();
+            foreach (string resourceName in arrResources)
+                if (resourceName.ToUpper().EndsWith(resource.ToUpper()))
+                {
+                    Stream resourceToSave = currentAssembly.GetManifestResourceStream(resourceName);
+                    var output = File.OpenWrite(path + "\\Trimlogs.exe");
+                    resourceToSave.CopyTo(output);
+                    resourceToSave.Flush();
+                    resourceToSave.Close();
+                    output.Flush();
+                    output.Close();
+                }
+
+        }
+
 
         static void seekLogsInFolder(string[] args)
         {
@@ -110,11 +170,13 @@ namespace ClusterLogReporter
                 if (File.Exists(path) && path.ToString().Contains("cluster.log"))
                 {
                     // This path is a file
+                    ExtractSaveResource("Trimlogs.exe", path);
                     _Tables.Add(ReadFiletoTbl(path));
                 }
                 else if (Directory.Exists(path))
                 {
                     // This path is a directory
+                    ExtractSaveResource("Trimlogs.exe", path);
                     processPath(path);
                 }
                 else
@@ -132,7 +194,11 @@ namespace ClusterLogReporter
                 // Process the list of files found in the directory.
                 string[] fileEntries = Directory.GetFiles(targetDirectory, "*cluster.log");
                 foreach (string fileName in fileEntries)
-                    _Tables.Add(ReadFiletoTbl(fileName));
+                {
+                   // _Tables.Add(ReadFiletoTbl(fileName));
+                    runTrimLogs(fileName, targetDirectory);
+                }
+                   
 
                 // Recurse into subdirectories of this directory.
                 string[] subdirectoryEntries = Directory.GetDirectories(targetDirectory);
@@ -177,6 +243,26 @@ namespace ClusterLogReporter
 
             }
 
+        }
+
+        static string getCurrentNodeFromLog(string pathToFile)
+        {
+            string[] splitlines = new string[10];
+            var lines = File.ReadLines(pathToFile).Take(10).ToArray();
+            string[] ret = new string[5];
+            foreach (var item in lines)
+            {
+                if (item.Contains("Current node"))
+                {
+                    splitlines = new string[item.Count()];
+                    splitlines = item.Split('(');
+                    ret = splitlines[1].ToString().Split(')');
+                    break;
+
+                }
+            } 
+            
+            return ret[0];
         }
 
 
