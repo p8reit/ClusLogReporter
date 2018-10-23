@@ -127,10 +127,10 @@ namespace ClusterLogReporter
                 Process.Start(proc).WaitForExit();
                 File.Delete(newlogspath + "\\Trimlogs.exe");
             }
-            catch (Exception)
+            catch (Exception e)
             {
-
-                throw;
+                Console.Write("Failed Processing file: " + pathToFile + " with error: " + e.ToString());
+                return;
             }
 
             
@@ -242,22 +242,31 @@ namespace ClusterLogReporter
 
         static string getCurrentNodeFromLog(string pathToFile)
         {
-            string[] splitlines = new string[10];
-            var lines = File.ReadLines(pathToFile).Take(10).ToArray();
-            string[] ret = new string[5];
-            foreach (var item in lines)
-            {
-                if (item.Contains("Current node"))
-                {
-                    splitlines = new string[item.Count()];
-                    splitlines = item.Split('(');
-                    ret = splitlines[1].ToString().Split(')');
-                    break;
 
+            try
+            {
+                string[] splitlines = new string[10];
+                var lines = File.ReadLines(pathToFile).Take(10).ToArray();
+                string[] ret = new string[5];
+                foreach (var item in lines)
+                {
+                    if (item.Contains("Current node"))
+                    {
+                        splitlines = new string[item.Count()];
+                        splitlines = item.Split('(');
+                        ret = splitlines[1].ToString().Split(')');
+                        break;
+
+                    }
                 }
-            } 
-            
-            return ret[0];
+
+                return ret[0];
+            }
+            catch (Exception e )
+            {
+                Console.Write("Failed to read node name from log: " + pathToFile + " with error: " + e.HResult.ToString());
+                throw;
+            }
         }
         
     }
