@@ -95,6 +95,13 @@ namespace ClusterLogReporter
 
         }
 
+        static void runTrimLogs()
+        {
+
+
+
+        }
+
         static void seekLogsInFolder(string[] args)
         {
 
