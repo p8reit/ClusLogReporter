@@ -101,7 +101,6 @@ namespace ClusterLogReporter
 
         static void runTrimLogs(string pathToFile, string logsRoot)
         {
-            string rootPath;
             string newlogspath = (logsRoot + "\\"  + getCurrentNodeFromLog(pathToFile));
             //mk dir
             //move copy of our tool there
@@ -116,19 +115,16 @@ namespace ClusterLogReporter
                 }
                 else
                 {
-                    Directory.CreateDirectory(newlogspath + Random.);
+                    Directory.CreateDirectory(newlogspath + System.DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
                 }
-               
                 
                 File.Copy((logsRoot + "\\Trimlogs.exe"), (newlogspath + "\\Trimlogs.exe"),true);
                 ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
                 proc.CreateNoWindow = false;
                 proc.UseShellExecute = false;
                 proc.WorkingDirectory = newlogspath;
-
                 proc.Arguments = pathToFile;
                 Process.Start(proc).WaitForExit();
-                
                 File.Delete(newlogspath + "\\Trimlogs.exe");
             }
             catch (Exception)
@@ -160,7 +156,6 @@ namespace ClusterLogReporter
                 }
 
         }
-
 
         static void seekLogsInFolder(string[] args)
         {
@@ -264,8 +259,6 @@ namespace ClusterLogReporter
             
             return ret[0];
         }
-
-
-
+        
     }
 }
