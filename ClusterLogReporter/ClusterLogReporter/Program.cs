@@ -15,7 +15,9 @@ namespace ClusterLogReporter
     class Program
     {
         //globals
-        static List<DataTable> _Tables = new List<DataTable>();
+       // static List<DataTable> _Tables = new List<DataTable>();
+        static string _logsPath = null;
+
 
         static void Main(string[] args)
         {
@@ -26,6 +28,7 @@ namespace ClusterLogReporter
         }
 
         #region FileProcessing
+
         static public DataTable ReadFiletoTbl(string FilePath)
         {
 
@@ -95,8 +98,6 @@ namespace ClusterLogReporter
 
         }
 
-        
-
         static void processPath(string targetDirectory)
         {
 
@@ -104,14 +105,16 @@ namespace ClusterLogReporter
             {
                 // Process the list of files found in the directory.
                 string[] fileEntries = Directory.GetFiles(targetDirectory, "*cluster.log");
+                Console.Write("Found " + fileEntries.Count().ToString() + " cluster logs in root folder. \r");
                 foreach (string fileName in fileEntries)
                 {
-                    // _Tables.Add(ReadFiletoTbl(fileName));
 
+                    Console.Write("Started processing file: " + fileName + "\r");
                     //this tranforms the cluster log with trimlogs
                     runTrimLogs(fileName, targetDirectory);
+                    Console.Write("Completed processing file: " + fileName + "\r");
+                    //build summary here
                     //process rules here
-
 
                 }
 
@@ -164,9 +167,11 @@ namespace ClusterLogReporter
                 throw;
             }
         }
+
         #endregion
 
         #region Utils
+
         public static void ExtractSaveResource(string resource, string path)
         {
             Assembly currentAssembly = Assembly.GetExecutingAssembly();
@@ -190,23 +195,30 @@ namespace ClusterLogReporter
 
             foreach (string path in args)
             {
+                _logsPath = path;
+
                 if (File.Exists(path) && path.ToString().Contains("cluster.log"))
                 {
                     // This path is a file
                     ExtractSaveResource("Trimlogs.exe", path);
                     // _Tables.Add(ReadFiletoTbl(path));
+                    File.Delete(path + "\\Trimlogs.exe");
                 }
                 else if (Directory.Exists(path))
                 {
                     // This path is a directory
                     ExtractSaveResource("Trimlogs.exe", path);
                     processPath(path);
+                    File.Delete(path + "\\Trimlogs.exe" );
                 }
                 else
                 {
                     Console.WriteLine("{0} is not a valid Cluster log file or directory.", path);
                 }
             }
+
+            //cleanup
+            File.Delete(_logsPath + "\\Trimlogs.exe");
         }
 
         static bool processArgs(string[] args)
@@ -242,7 +254,9 @@ namespace ClusterLogReporter
 
         static void runTrimLogs(string pathToFile, string logsRoot)
         {
-            string newlogspath = (logsRoot + "\\" + getCurrentNodeFromLog(pathToFile));
+            string CurrentNode = getCurrentNodeFromLog(pathToFile);
+            string newlogspath = (logsRoot + "\\" + CurrentNode);
+            Console.Write("Clusterlog for node " + CurrentNode + " being processed and saved to " + newlogspath + "\r");
             //mk dir
             //move copy of our tool there
             //process our log in that dir
