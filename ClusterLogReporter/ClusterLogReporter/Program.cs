@@ -14,7 +14,7 @@ namespace ClusterLogReporter
 {
     class Program
     {
-
+        //globals
         static List<DataTable> _Tables = new List<DataTable>();
 
         static void Main(string[] args)
@@ -95,69 +95,7 @@ namespace ClusterLogReporter
 
         }
 
-        static void runTrimLogs(string pathToFile, string logsRoot)
-        {
-            string newlogspath = (logsRoot + "\\" + getCurrentNodeFromLog(pathToFile));
-            //mk dir
-            //move copy of our tool there
-            //process our log in that dir
-            //remove tool 
-            // getCurrentNodeFromLog(pathToFile);
-            try
-            {
-                if (!Directory.Exists(newlogspath))
-                {
-                    Directory.CreateDirectory(newlogspath);
-                }
-                else
-                {
-                    Directory.CreateDirectory(newlogspath + System.DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
-                }
-
-                File.Copy((logsRoot + "\\Trimlogs.exe"), (newlogspath + "\\Trimlogs.exe"), true);
-                ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
-                proc.CreateNoWindow = false;
-                proc.UseShellExecute = false;
-                proc.WorkingDirectory = newlogspath;
-                proc.Arguments = pathToFile;
-                Process.Start(proc).WaitForExit();
-                File.Delete(newlogspath + "\\Trimlogs.exe");
-            }
-            catch (Exception e)
-            {
-                Console.Write("Failed Processing file: " + pathToFile + " with error: " + e.ToString());
-                return;
-            }
-
-
-
-
-
-        }
-
-        static void seekLogsInFolder(string[] args)
-        {
-
-            foreach (string path in args)
-            {
-                if (File.Exists(path) && path.ToString().Contains("cluster.log"))
-                {
-                    // This path is a file
-                    ExtractSaveResource("Trimlogs.exe", path);
-                    // _Tables.Add(ReadFiletoTbl(path));
-                }
-                else if (Directory.Exists(path))
-                {
-                    // This path is a directory
-                    ExtractSaveResource("Trimlogs.exe", path);
-                    processPath(path);
-                }
-                else
-                {
-                    Console.WriteLine("{0} is not a valid Cluster log file or directory.", path);
-                }
-            }
-        }
+        
 
         static void processPath(string targetDirectory)
         {
@@ -247,6 +185,29 @@ namespace ClusterLogReporter
 
         }
 
+        static void seekLogsInFolder(string[] args)
+        {
+
+            foreach (string path in args)
+            {
+                if (File.Exists(path) && path.ToString().Contains("cluster.log"))
+                {
+                    // This path is a file
+                    ExtractSaveResource("Trimlogs.exe", path);
+                    // _Tables.Add(ReadFiletoTbl(path));
+                }
+                else if (Directory.Exists(path))
+                {
+                    // This path is a directory
+                    ExtractSaveResource("Trimlogs.exe", path);
+                    processPath(path);
+                }
+                else
+                {
+                    Console.WriteLine("{0} is not a valid Cluster log file or directory.", path);
+                }
+            }
+        }
 
         static bool processArgs(string[] args)
         {
@@ -277,6 +238,41 @@ namespace ClusterLogReporter
 
             }
 
+        }
+
+        static void runTrimLogs(string pathToFile, string logsRoot)
+        {
+            string newlogspath = (logsRoot + "\\" + getCurrentNodeFromLog(pathToFile));
+            //mk dir
+            //move copy of our tool there
+            //process our log in that dir
+            //remove tool 
+            // getCurrentNodeFromLog(pathToFile);
+            try
+            {
+                if (!Directory.Exists(newlogspath))
+                {
+                    Directory.CreateDirectory(newlogspath);
+                }
+                else
+                {
+                    Directory.CreateDirectory(newlogspath + System.DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
+                }
+
+                File.Copy((logsRoot + "\\Trimlogs.exe"), (newlogspath + "\\Trimlogs.exe"), true);
+                ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
+                proc.CreateNoWindow = false;
+                proc.UseShellExecute = false;
+                proc.WorkingDirectory = newlogspath;
+                proc.Arguments = pathToFile;
+                Process.Start(proc).WaitForExit();
+                File.Delete(newlogspath + "\\Trimlogs.exe");
+            }
+            catch (Exception e)
+            {
+                Console.Write("Failed Processing file: " + pathToFile + " with error: " + e.ToString());
+                return;
+            }
         }
         #endregion
 
