@@ -19,6 +19,7 @@ namespace ClusterLogReporter
         static List<DataTable> _ResourceTables = new List<DataTable>();
         static string _logsPath = null;
         static List<Node> _NodeInfo = new List<Node>();
+        static int _processedCount = 0;
         //structs
         
 
@@ -32,7 +33,11 @@ namespace ClusterLogReporter
                 populateDataFromClusterLogs(args);
 
                 //take the resources csv file from each node and process it to a merged view
-                getResources(); //stub
+                if (_processedCount > 0)
+                {
+                    getResources(); //stub
+                }
+               
 
             }
         }
@@ -172,7 +177,7 @@ namespace ClusterLogReporter
                 var lines = File.ReadLines(pathToFile).Take(10).ToArray();
                 string[] ret = new string[5];
 
-                if (!lines[0].ToString().Contains("Cluster"))
+                if (lines == null || lines.Count() == 0)
                 {
                     Console.Write("This file is not a V2 Cluster log: " + pathToFile);
                     return null;
@@ -191,10 +196,15 @@ namespace ClusterLogReporter
 
                 return ret[0];
             }
+            catch(IndexOutOfRangeException i)
+            {
+                Console.Write("Failed to read node name from log: " + pathToFile + " as its 0 bytes " + i.HResult );
+                throw;
+            }
             catch (Exception e)
             {
                 Console.Write("Failed to read node name from log: " + pathToFile + " with error: " + e.HResult.ToString());
-                throw;
+                return null;
             }
         }
 
@@ -284,8 +294,12 @@ namespace ClusterLogReporter
 
         static void runTrimLogs(string pathToFile, string logsRoot)
         {
-
             string CurrentNode = getCurrentNodeFromLog(pathToFile);
+            if (String.IsNullOrEmpty(CurrentNode))
+            {
+                return;
+            }
+            
             string newlogspath = (logsRoot + "\\" + CurrentNode);
             Node newnode = new Node();
 
@@ -320,6 +334,7 @@ namespace ClusterLogReporter
                 proc.Arguments = pathToFile;
                 Process.Start(proc).WaitForExit();
                 File.Delete(newlogspath + "\\Trimlogs.exe");
+                _processedCount++;
             }
             catch (Exception e)
             {
