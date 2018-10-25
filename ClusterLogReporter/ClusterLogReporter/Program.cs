@@ -8,6 +8,7 @@ using System.IO;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
+using System.Data.OleDb;
 
 
 namespace ClusterLogReporter
@@ -15,15 +16,24 @@ namespace ClusterLogReporter
     class Program
     {
         //globals
-       // static List<DataTable> _Tables = new List<DataTable>();
+        static List<DataTable> _ResourceTables = new List<DataTable>();
         static string _logsPath = null;
-
+        static List<Node> _NodeInfo = new List<Node>();
+        //structs
+        
 
         static void Main(string[] args)
         {
             if (processArgs(args))
             {
-                seekLogsInFolder(args);
+                //validate the cluster is a v2 log and process it with trimlogs
+                //this leaves you will a folder for each node 
+                //with CSV and txt files with data to be poked for info
+                populateDataFromClusterLogs(args);
+
+                //take the resources csv file from each node and process it to a merged view
+                getResources(); //stub
+
             }
         }
 
@@ -98,6 +108,29 @@ namespace ClusterLogReporter
 
         }
 
+        static DataTable getCSVToTbl(string path)
+        {
+
+            string FileName = path;
+            OleDbConnection conn = new OleDbConnection
+               ("Provider=Microsoft.Jet.OleDb.4.0; Data Source = " +
+                 Path.GetDirectoryName(FileName) +
+                 "; Extended Properties = \"Text;HDR=YES;FMT=Delimited\"");
+
+            conn.Open();
+
+            OleDbDataAdapter adapter = new OleDbDataAdapter
+                   ("SELECT * FROM " + Path.GetFileName(FileName), conn);
+
+            DataSet ds = new DataSet("FileData");
+            adapter.Fill(ds);
+
+            conn.Close();
+
+            return ds.Tables[0];
+
+        }
+
         static void processPath(string targetDirectory)
         {
 
@@ -106,23 +139,20 @@ namespace ClusterLogReporter
                 // Process the list of files found in the directory.
                 string[] fileEntries = Directory.GetFiles(targetDirectory, "*cluster.log");
                 Console.Write("Found " + fileEntries.Count().ToString() + " cluster logs in root folder. \r");
+
                 foreach (string fileName in fileEntries)
                 {
 
-                    Console.Write("Started processing file: " + fileName + "\r");
+                    Console.Write("Started processing file: " + fileName + " \r");
                     //this tranforms the cluster log with trimlogs
                     runTrimLogs(fileName, targetDirectory);
-                    Console.Write("Completed processing file: " + fileName + "\r");
-                    //build summary here
-                    //process rules here
+                   // Console.Write("Completed processing file: " + fileName + "\r");
 
                 }
-
-
-                // Recurse into subdirectories of this directory.
-                string[] subdirectoryEntries = Directory.GetDirectories(targetDirectory);
-                foreach (string subdirectory in subdirectoryEntries)
-                    processPath(subdirectory);
+                //// Recurse into subdirectories of this directory.
+                //string[] subdirectoryEntries = Directory.GetDirectories(targetDirectory);
+                //foreach (string subdirectory in subdirectoryEntries)
+                //    processPath(subdirectory);
             }
             catch (System.OutOfMemoryException e)
             {
@@ -190,7 +220,7 @@ namespace ClusterLogReporter
 
         }
 
-        static void seekLogsInFolder(string[] args)
+        static void populateDataFromClusterLogs(string[] args)
         {
 
             foreach (string path in args)
@@ -254,8 +284,16 @@ namespace ClusterLogReporter
 
         static void runTrimLogs(string pathToFile, string logsRoot)
         {
+
             string CurrentNode = getCurrentNodeFromLog(pathToFile);
             string newlogspath = (logsRoot + "\\" + CurrentNode);
+            Node newnode = new Node();
+
+            newnode.name = CurrentNode;
+            newnode.logfilepath = newlogspath;
+
+            _NodeInfo.Add(newnode);
+
             Console.Write("Clusterlog for node " + CurrentNode + " being processed and saved to " + newlogspath + "\r");
             //mk dir
             //move copy of our tool there
@@ -270,7 +308,8 @@ namespace ClusterLogReporter
                 }
                 else
                 {
-                    Directory.CreateDirectory(newlogspath + System.DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
+                    newlogspath = (newlogspath + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmssfff"));
+                    Directory.CreateDirectory(newlogspath);
                 }
 
                 File.Copy((logsRoot + "\\Trimlogs.exe"), (newlogspath + "\\Trimlogs.exe"), true);
@@ -290,7 +329,31 @@ namespace ClusterLogReporter
         }
         #endregion
 
+        static void getResources()
+        {
 
+            //read each nodes resources file
+            foreach (Node node in _NodeInfo)
+            {
+                string resourcefile = (node.logfilepath + "resources.csv");
+                _ResourceTables.Add(getCSVToTbl(resourcefile));
+            }
+            
+        }
+
+
+    }
+
+    struct Node
+    {
+       public string name;
+       public  string logfilepath;
+       public DataTable SystemEvt;
+       public DataTable Resources;
+
+    }
+    class Utils
+    {
 
 
     }
