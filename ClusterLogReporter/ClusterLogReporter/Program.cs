@@ -341,7 +341,6 @@ namespace ClusterLogReporter
             
         }
 
-
     }
 
     struct Node
