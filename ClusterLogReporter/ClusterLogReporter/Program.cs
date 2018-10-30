@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Data.OleDb;
 
 
+
 namespace ClusterLogReporter
 {
     class Program
@@ -20,8 +21,8 @@ namespace ClusterLogReporter
         static string _logsPath = null;
         static List<Node> _NodeInfo = new List<Node>();
         static int _processedCount = 0;
-        //structs
-        
+        static StreamWriter _w = null;
+       
 
         static void Main(string[] args)
         {
@@ -35,10 +36,16 @@ namespace ClusterLogReporter
                 //take the resources csv file from each node and process it to a merged view
                 if (_processedCount > 0)
                 {
-                    getResources(); //stub
-                }
-               
+                    getCSVFilesForNode(); //stub
 
+                    //process recources and find owners and states
+                    //start processing any resources in a none healthy state
+
+                    using (_w = File.AppendText(_logsPath + "ClusterReportlog.txt"))
+                    {
+                        processResources();
+                    }
+                }
             }
         }
 
@@ -208,6 +215,45 @@ namespace ClusterLogReporter
             }
         }
 
+        static void getCSVFilesForNode()
+        {
+
+            //read each nodes resources file
+            for (int i = 0; i < _NodeInfo.Count; i++)
+            {
+                // Process the list of files found in the directory.
+                string[] fileEntries = Directory.GetFiles(_NodeInfo[i].logfilepath, "*.csv");
+                Console.Write("Found " + fileEntries.Count().ToString() + " cluster logs in node: " + _NodeInfo[i].name + " folder. \r");
+
+                foreach (var file in fileEntries)
+                {
+
+                    switch (Path.GetFileName(file))
+                    {
+                        case "system.csv":
+                            _NodeInfo[i].SystemEvt = getCSVToTbl(file);
+                            break;
+                        case "resources.csv":
+                            _NodeInfo[i].Resources = getCSVToTbl(file);
+                            break;
+                        case "nodes.csv":
+                            _NodeInfo[i].nodes = getCSVToTbl(file);
+                            break;
+                        case "resource_types.csv":
+                            _NodeInfo[i].resource_types = getCSVToTbl(file);
+                            break;
+                        //not tracking this file name
+                        default:
+                            break;
+                    }
+                }
+
+               // string resourcefile = (_NodeInfo[i].logfilepath + "\\resources.csv");
+               // _ResourceTables.Add(getCSVToTbl(resourcefile));
+            }
+        }
+
+
         #endregion
 
         #region Utils
@@ -300,15 +346,10 @@ namespace ClusterLogReporter
                 return;
             }
             
-            string newlogspath = (logsRoot + "\\" + CurrentNode);
+            string newlogspath = (logsRoot + CurrentNode);
             Node newnode = new Node();
-
             newnode.name = CurrentNode;
-            newnode.logfilepath = newlogspath;
-
-            _NodeInfo.Add(newnode);
-
-            Console.Write("Clusterlog for node " + CurrentNode + " being processed and saved to " + newlogspath + "\r");
+            
             //mk dir
             //move copy of our tool there
             //process our log in that dir
@@ -326,6 +367,9 @@ namespace ClusterLogReporter
                     Directory.CreateDirectory(newlogspath);
                 }
 
+                newnode.logfilepath = newlogspath;
+                _NodeInfo.Add(newnode);
+                Console.Write("Clusterlog for node " + newnode.name + " being processed and saved to " + newnode.logfilepath + "\r");
                 File.Copy((logsRoot + "\\Trimlogs.exe"), (newlogspath + "\\Trimlogs.exe"), true);
                 ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
                 proc.CreateNoWindow = false;
@@ -342,33 +386,70 @@ namespace ClusterLogReporter
                 return;
             }
         }
-        #endregion
 
-        static void getResources()
+        static void processResources()
         {
 
-            //read each nodes resources file
-            foreach (Node node in _NodeInfo)
+            // Get the DataTable of a DataSet.
+
+            foreach (var node in _NodeInfo)
             {
-                string resourcefile = (node.logfilepath + "resources.csv");
-                _ResourceTables.Add(getCSVToTbl(resourcefile));
+
+                DataRow[] rows = node.Resources.Select("_state NOT IN ('Online', 'Unknown', 'Offline')");
+
+                // Print the value one column of each DataRow.
+                for (int i = 0; i < rows.Length; i++)
+                {
+                    Log(node.name + "|" + rows[i][1].ToString() + "|" + rows[i][2].ToString(), _w);
+                    
+                }
             }
-            
         }
+
+        public static void Log(string logMessage, TextWriter w)
+        {
+            w.Write("\r\nLog Entry : ");
+            w.WriteLine("{0} {1}", DateTime.Now.ToLongTimeString(),
+                DateTime.Now.ToLongDateString());
+            w.WriteLine("  :");
+            w.WriteLine("  :{0}", logMessage);
+            w.WriteLine("-------------------------------");
+        }
+
+        #endregion
+
+
 
     }
 
-    struct Node
+    class Node
     {
        public string name;
        public  string logfilepath;
        public DataTable SystemEvt;
        public DataTable Resources;
+       public DataTable resource_types;
+       public DataTable nodes;
 
     }
-    class Utils
-    {
 
+    
+       public class outputLog
+        {
+            public static void Log(string logMessage, TextWriter w)
+            {
+                w.Write("\r\nLog Entry : ");
+                w.WriteLine("{0} {1}", DateTime.Now.ToLongTimeString(),
+                    DateTime.Now.ToLongDateString());
+                w.WriteLine("  :");
+                w.WriteLine("  :{0}", logMessage);
+                w.WriteLine("-------------------------------");
+            }
 
-    }
+            public static void Openlog()
+            {
+
+            }
+        }
+
 }
