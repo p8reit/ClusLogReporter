@@ -51,7 +51,7 @@
     <Resource Include="Cluster_analysis.xlsx" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="TrimLogs.exe" />
+    <EmbeddedResource Include="Tool.exe" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

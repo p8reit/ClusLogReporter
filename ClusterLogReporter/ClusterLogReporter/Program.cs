@@ -17,12 +17,18 @@ namespace ClusterLogReporter
     class Program
     {
         //globals
+        const string _OperationalLog = "\\operational.txt";
+        const string _SystemLog = "\\System.txt";
+        const string _ClusterLog = "\\cluster.txt";
         static List<DataTable> _ResourceTables = new List<DataTable>();
         static string _logsPath = null;
         static List<Node> _NodeInfo = new List<Node>();
         static int _processedCount = 0;
         static StreamWriter _w = null;
-       
+        static bool _showVMs = false;
+        static bool _ignoreOfflineResource = true;
+        static bool _ignoreUnknownResource = false;
+        static Dictionary<string, string> _KnownResources = new Dictionary<string, string>();
 
         static void Main(string[] args)
         {
@@ -43,7 +49,8 @@ namespace ClusterLogReporter
 
                     using (_w = File.AppendText(_logsPath + "ClusterReportlog.txt"))
                     {
-                        processResources();
+                       // processResources();
+                        createSumary();
                     }
                 }
             }
@@ -143,9 +150,31 @@ namespace ClusterLogReporter
 
         }
 
-        static void processPath(string targetDirectory)
+        static DataTable getCSVToTbl(string path, string query)
         {
 
+            string FileName = path;
+            OleDbConnection conn = new OleDbConnection
+               ("Provider=Microsoft.Jet.OleDb.4.0; Data Source = " +
+                 Path.GetDirectoryName(FileName) +
+                 "; Extended Properties = \"Text;HDR=YES;FMT=Delimited\"");
+
+            conn.Open();
+
+            OleDbDataAdapter adapter = new OleDbDataAdapter
+                   (query, conn);
+
+            DataSet ds = new DataSet("FileData");
+            adapter.Fill(ds);
+
+            conn.Close();
+
+            return ds.Tables[0];
+
+        }
+
+        static void processPath(string targetDirectory)
+        {
             try
             {
                 // Process the list of files found in the directory.
@@ -234,7 +263,9 @@ namespace ClusterLogReporter
                             _NodeInfo[i].SystemEvt = getCSVToTbl(file);
                             break;
                         case "resources.csv":
+                            string query = "SELECT * FROM " + Path.GetFileName(file) + " WHERE _state NOT IN ('Offline', 'Unkown', 'Online')";
                             _NodeInfo[i].Resources = getCSVToTbl(file);
+                            _ResourceTables.Add(_NodeInfo[i].Resources);
                             break;
                         case "nodes.csv":
                             _NodeInfo[i].nodes = getCSVToTbl(file);
@@ -266,7 +297,7 @@ namespace ClusterLogReporter
                 if (resourceName.ToUpper().EndsWith(resource.ToUpper()))
                 {
                     Stream resourceToSave = currentAssembly.GetManifestResourceStream(resourceName);
-                    var output = File.OpenWrite(path + "\\Trimlogs.exe");
+                    var output = File.OpenWrite(path + "\\Tool.exe");
                     resourceToSave.CopyTo(output);
                     resourceToSave.Flush();
                     resourceToSave.Close();
@@ -286,16 +317,16 @@ namespace ClusterLogReporter
                 if (File.Exists(path) && path.ToString().Contains("cluster.log"))
                 {
                     // This path is a file
-                    ExtractSaveResource("Trimlogs.exe", path);
+                    ExtractSaveResource("Tool.exe", path);
                     // _Tables.Add(ReadFiletoTbl(path));
-                    File.Delete(path + "\\Trimlogs.exe");
+                    File.Delete(path + "\\Tool.exe");
                 }
                 else if (Directory.Exists(path))
                 {
                     // This path is a directory
-                    ExtractSaveResource("Trimlogs.exe", path);
+                    ExtractSaveResource("Tool.exe", path);
                     processPath(path);
-                    File.Delete(path + "\\Trimlogs.exe" );
+                    File.Delete(path + "\\Tool.exe");
                 }
                 else
                 {
@@ -304,7 +335,7 @@ namespace ClusterLogReporter
             }
 
             //cleanup
-            File.Delete(_logsPath + "\\Trimlogs.exe");
+            File.Delete(_logsPath + "\\Tool.exe");
         }
 
         static bool processArgs(string[] args)
@@ -363,14 +394,16 @@ namespace ClusterLogReporter
                 }
                 else
                 {
-                    newlogspath = (newlogspath + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmssfff"));
+                    //just for testing
+                  
+                    newlogspath = (newlogspath + "_" + System.DateTime.Now.ToString("yyyy_MM_dd_HHmmssfff"));
                     Directory.CreateDirectory(newlogspath);
                 }
 
                 newnode.logfilepath = newlogspath;
                 _NodeInfo.Add(newnode);
                 Console.Write("Clusterlog for node " + newnode.name + " being processed and saved to " + newnode.logfilepath + "\r");
-                File.Copy((logsRoot + "\\Trimlogs.exe"), (newlogspath + "\\Trimlogs.exe"), true);
+                File.Copy((logsRoot + "\\Tool.exe"), (newlogspath + "\\Trimlogs.exe"), true);
                 ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
                 proc.CreateNoWindow = false;
                 proc.UseShellExecute = false;
@@ -397,26 +430,225 @@ namespace ClusterLogReporter
 
                 DataRow[] rows = node.Resources.Select("_state NOT IN ('Online', 'Unknown', 'Offline')");
 
-                // Print the value one column of each DataRow.
-                for (int i = 0; i < rows.Length; i++)
-                {
-                    Log(node.name + "|" + rows[i][1].ToString() + "|" + rows[i][2].ToString(), _w);
+                
+                
+                //// Print the value one column of each DataRow.
+                //log("============Resources of Interest by Node============", _w);
+                //for (int i = 0; i < rows.Length; i++)
+                //{
                     
-                }
+                //    log(node.name + " | " + rows[i][1].ToString() + " | " + rows[i][2].ToString(), _w);
+
+                //    // File verbose logs for each node for this resource
+                //    using (StreamReader r = new StreamReader((node.logfilepath + _OperationalLog)))
+                //    {
+
+                //        log("============Resource Verbose Output============", _w);
+                //        while (!r.EndOfStream)
+                //        {
+
+                //            try
+                //            {
+                //                if (!r.ReadLine().Contains("SCVMM") && r.ReadLine().Contains(rows[i][1].ToString()))
+                //                {
+                //                    log(r.ReadLine().ToString(), _w);
+                //                }
+                //            }
+                //            catch (NullReferenceException e)
+                //            {
+
+                //                continue;
+                //            }
+                            
+                //        }
+                //    }
+                    
+                //}
+
+                
             }
         }
 
-        public static void Log(string logMessage, TextWriter w)
+        static void createSumary()
         {
-            w.Write("\r\nLog Entry : ");
-            w.WriteLine("{0} {1}", DateTime.Now.ToLongTimeString(),
-                DateTime.Now.ToLongDateString());
-            w.WriteLine("  :");
-            w.WriteLine("  :{0}", logMessage);
-            w.WriteLine("-------------------------------");
+
+            log("Logs Processed: " + _NodeInfo.Count.ToString(),_w);
+            log("log Paths: \r",_w);
+            foreach (var node in _NodeInfo)
+            {
+                log("       " + node.logfilepath, _w);
+            }
+            log(" ", _w);
+            log("Nodes Found: ", _w);
+            foreach (var node in _NodeInfo)
+            {
+                log("       " + node.name, _w);
+            }
+            log(" ", _w);
+            log("Resources States by Node:", _w);
+
+            //Finds Resources not in the online state  -- TODO: Improve this apporach to interesting resources
+            findInterestingResources();
+
+                    
+
         }
 
-        #endregion
+        public static void log(string logMessage, TextWriter w)
+        {
+            //w.Write("\r\nLog Entry : ");
+           // w.WriteLine("{0} {1}", DateTime.Now.ToLongTimeString(),
+           //     DateTime.Now.ToLongDateString());
+           // w.WriteLine("  :");
+            w.WriteLine("{0}", logMessage);
+           // w.WriteLine("-------------------------------");
+        }
+
+        public static DataTable readEventLog(string searchterm, string filepath)
+        {
+
+            //Reads the logfile requested and prpvides a table of lines with searched
+            DataTable table = new DataTable();
+            table.Columns.Add("LineNumber", typeof(string));
+            table.Columns.Add("Trace Data", typeof(string));
+            try
+            {
+                if (String.IsNullOrEmpty(filepath))
+                {
+                    System.Console.WriteLine("File Path is Null or empty");
+                }
+                else
+                {
+                    //string[] lines = File.ReadAllLines(FilePath);
+                    using (FileStream fs = File.Open(filepath, FileMode.Open))
+                    using (BufferedStream bs = new BufferedStream(fs))
+                    using (StreamReader sr = new StreamReader(bs))
+                    {
+                        string s;
+                        int i = 0;
+                        while ((s = sr.ReadLine()) != null)
+                        {
+                            if (s.Contains(searchterm))
+                            {
+                                DataRow dr = table.NewRow();
+                                table.Rows.Add(i++, s);
+                            }
+
+                        }
+
+                        sr.Dispose();
+                        bs.Dispose();
+                        fs.Dispose();
+                        sr.Close();
+                        bs.Close();
+                        fs.Close();
+
+                    }
+
+                }
+
+                return table;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public static void findInterestingResources()
+        {
+
+            foreach (var node in _NodeInfo)
+            {
+
+                log("   Node: " + node.name, _w);
+                foreach (DataRow row in node.Resources.Rows)
+                {
+
+
+                    if (_KnownResources.ContainsKey(row["ObjectId"].ToString()))
+                    {
+                        continue;
+                    }
+
+                    _KnownResources.Add(row["ObjectId"].ToString(), row["ObjectName"].ToString());
+
+                    //Find Failed Resources
+                    //filter out VM and VM Configs for testing too much noise, TODO: Make this an option 
+                    if (!row["_state"].ToString().Contains("Online"))
+                    {
+
+                        //filtering rules for type and state
+                        //
+                        if (row["resourceType"].ToString().Contains("Virtual Machine") || row["resourceType"].ToString().Contains("Configuration") && !_showVMs)
+                        {
+                            continue;
+                        }
+                        if (row["_state"].ToString().Contains("Offline") && _ignoreOfflineResource)
+                        {
+                            continue;
+                        }
+                        if (row["_state"].ToString().Contains("Unknown") && _ignoreUnknownResource)
+                        {
+                            continue;
+                        }
+
+
+                        //start entery in log for this resource
+
+                        log("           Rsource: " + row["ObjectName"].ToString() + " ObjectId: " + row["ObjectId"].ToString() + " ResourceType: " + row["resourceType"].ToString(), _w);
+                        log("                   State: " + row["_state"].ToString() + " OldState: " + row["_oldState"].ToString(), _w);
+                       
+                        
+                        //catpure inMemoryLastOperationStatusCode if there was one provided
+                        if (!row["inMemoryLastOperationStatusCode"].ToString().Contains("0"))
+                        {
+                            int x = 0; int.TryParse(row["inMemoryLastOperationStatusCode"].ToString(),out x);
+                            string hexvalue = x.ToString("X");
+                            int hex = int.Parse(hexvalue, System.Globalization.NumberStyles.HexNumber);
+                            
+                        log("                   Last InMemory State: " + hex.ToString(), _w);
+                        log("\r", _w);
+
+                        }
+                        //addd data from cluster log
+                        DataTable evts_OpLog = readEventLog(row["ObjectName"].ToString(), node.logfilepath + _OperationalLog);
+                        if (evts_OpLog.Rows.Count > 0)
+                        {
+                            log("                           Cluster Operational log:  " + row["ObjectName"].ToString(), _w);
+                            for (int i = 0; i < evts_OpLog.Rows.Count; i++)
+                            {
+                                log("                               " + evts_OpLog.Rows[i][1].ToString(), _w);
+                            }
+                            log("\r", _w);
+                            log("       ================================================== \r", _w);
+                            log("\r", _w);
+                        }
+                       
+                        //addd data from cluster log
+                        DataTable evts_Cluster = readEventLog(row["ObjectName"].ToString(), node.logfilepath + _ClusterLog);
+                        if (evts_Cluster.Rows.Count > 0)
+                        {
+                            log("                           Cluster verbose log:  " + row["ObjectName"].ToString(), _w);
+                            for (int i = 0; i < evts_Cluster.Rows.Count; i++)
+                            {
+                                log("                               " + evts_Cluster.Rows[i][1].ToString(), _w);
+                            }
+                        }
+                        
+
+                        log("\r", _w);
+                        log("\r", _w);
+                        log("       ================================================== \r", _w);
+                        log("\r", _w);
+                    }
+                }
+
+            }
+        }
+
+            #endregion
 
 
 
