@@ -36,6 +36,7 @@ namespace ClusterLogReporter
         static StringBuilder _GroupInfo = new StringBuilder();
         static StringBuilder _ResourceInfo = new StringBuilder();
         static StringBuilder _RuleInfo = new StringBuilder();
+        static StringBuilder _NodeEvents = new StringBuilder();
 
         static bool _showVMs = false;
         static bool _ignoreOfflineResource = false;
@@ -113,17 +114,26 @@ namespace ClusterLogReporter
         static void createSumary()
         {
 
-
+            Console.Write("Gathering Summary Information...");
+            
             //do the actual log work frist
             //Finds Resources not in the online state-- TODO: Improve this apporach to interesting resources
+            Console.Write("Searching for interesting resources...");
             findInterestingResources();
+
+            Console.Write("Searching for interesting groups...");
             //Find Groups
             findInterestingGroups();
+
+            Console.Write("Searching for interesting volumes states...");
             //get volume info 
             gatherVolumeInfo();
-            //
+
+            Console.Write("Processing Rules...");
+            //rules processing
             processRules();
 
+            Console.Write("Generating output report to :" + _logsPath);
 
             //stupid stuff to get the cluster name 
             foreach (var node in _NodeInfo)
@@ -156,6 +166,10 @@ namespace ClusterLogReporter
             foreach (var node in _NodeInfo)
             {
                 writeToLog("       " + node.name, _w);
+                findNodeEvents(node);
+                writeToLog(_NodeEvents.ToString(),_w);
+                _NodeEvents.Clear();
+                writeToLog("", _w);
             }
 
             writeToLog("Summary:", _w);
@@ -170,8 +184,6 @@ namespace ClusterLogReporter
                 writeToLog("", _w);
             }
             
-
-
             writeToLog(" ", _w);
             writeToLog("Volume Information:", _w);
             writeToLog(" ", _w);
@@ -336,7 +348,7 @@ namespace ClusterLogReporter
             {
                 // Process the list of files found in the directory.
                 string[] fileEntries = Directory.GetFiles(targetDirectory, "*cluster.log");
-                Console.Write("Found " + fileEntries.Count().ToString() + " cluster logs in root folder. \r");
+                Console.Write("Found " + fileEntries.Count().ToString() + " cluster logs in root folder.");
                 List<Task<bool>> Tasklist = new List<Task<bool>>();
 
 
@@ -561,7 +573,7 @@ namespace ClusterLogReporter
 
                 //newnode.logfilepath = newlogspath;
                 //_NodeInfo.Add(newnode);
-                Console.Write("Clusterlog for node " + CurrentNode + " being processed and saved to " + newlogspath + "\r");
+                Console.Write("Clusterlog for node " + CurrentNode + " being processed and saved to " + newlogspath);
                 File.Copy((logsRoot + "\\Tool.exe"), (newlogspath + "\\Trimlogs.exe"), true);
                 ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
                 proc.CreateNoWindow = false;
@@ -950,6 +962,39 @@ namespace ClusterLogReporter
 
         }
 
+        public static void findNodeEvents(Node Node)
+        {
+
+
+            //Find Join events
+            DataTable evts_Cluster = readEventLog("joined the failover cluster", Node.logfilepath + _OperationalLog);
+            if (evts_Cluster.Rows.Count > 0)
+            {
+                
+                _NodeEvents.AppendLine("            Join Events:  ");
+                for (int i = 0; i < evts_Cluster.Rows.Count; i++)
+                {
+                _NodeEvents.AppendLine("                    " + evts_Cluster.Rows[i][1].ToString());
+                }
+                _NodeEvents.AppendLine("            =============================================");
+            }
+
+
+            //Find Join events
+            DataTable evts_Cluster1 = readEventLog("isolated state", Node.logfilepath + _SystemLog);
+            if (evts_Cluster1.Rows.Count > 0)
+            {
+
+                _NodeEvents.AppendLine("            Isolation Events:  ");
+                for (int i = 0; i < evts_Cluster1.Rows.Count; i++)
+                {
+                    _NodeEvents.AppendLine("                    " + evts_Cluster1.Rows[i][1].ToString());
+                }
+                _NodeEvents.AppendLine("            =============================================");
+            }
+
+        }
+
         #endregion
 
         #region HTML
@@ -1079,6 +1124,15 @@ namespace ClusterLogReporter
        public DataTable resource_types;
        public DataTable nodes;
        public string NodeState;
+
+    }
+
+    class Resource
+    {
+
+        public string Name;
+        public string State;
+        public string Type;
 
     }
 
