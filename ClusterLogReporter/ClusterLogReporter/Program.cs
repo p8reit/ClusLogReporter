@@ -38,7 +38,7 @@ namespace ClusterLogReporter
         static StringBuilder _RuleInfo = new StringBuilder();
         static StringBuilder _NodeEvents = new StringBuilder();
 
-        static bool _showVMs = false;
+        static bool _showVMs = true;
         static bool _ignoreOfflineResource = false;
         static bool _ignoreUnknownResource = false;
         static bool _skipfilecreate = true;
@@ -965,6 +965,31 @@ namespace ClusterLogReporter
         public static void findNodeEvents(Node Node)
         {
 
+            //Find service start events
+            DataTable evts_Cluster2 = readEventLog("Starting clussvc", Node.logfilepath + _ClusterLog);
+            if (evts_Cluster2.Rows.Count > 0)
+            {
+
+                _NodeEvents.AppendLine("            Starting Clussvc Events:  ");
+                for (int i = 0; i < evts_Cluster2.Rows.Count; i++)
+                {
+                    _NodeEvents.AppendLine("                    " + evts_Cluster2.Rows[i][1].ToString());
+                }
+                _NodeEvents.AppendLine("            =============================================");
+            }
+
+            //Find new view events
+            DataTable evts_Cluster3 = readEventLog("New View is", Node.logfilepath + _ClusterLog);
+            if (evts_Cluster3.Rows.Count > 0)
+            {
+
+                _NodeEvents.AppendLine("            Node Membership View:  ");
+                for (int i = 0; i < evts_Cluster3.Rows.Count; i++)
+                {
+                    _NodeEvents.AppendLine("                    " + evts_Cluster3.Rows[i][1].ToString());
+                }
+                _NodeEvents.AppendLine("            =============================================");
+            }
 
             //Find Join events
             DataTable evts_Cluster = readEventLog("joined the failover cluster", Node.logfilepath + _OperationalLog);
@@ -978,8 +1003,7 @@ namespace ClusterLogReporter
                 }
                 _NodeEvents.AppendLine("            =============================================");
             }
-
-
+            
             //Find Join events
             DataTable evts_Cluster1 = readEventLog("isolated state", Node.logfilepath + _SystemLog);
             if (evts_Cluster1.Rows.Count > 0)
@@ -989,6 +1013,20 @@ namespace ClusterLogReporter
                 for (int i = 0; i < evts_Cluster1.Rows.Count; i++)
                 {
                     _NodeEvents.AppendLine("                    " + evts_Cluster1.Rows[i][1].ToString());
+                }
+                _NodeEvents.AppendLine("            =============================================");
+            }
+
+            //consecutive heartbeats
+            //Find Join events
+            DataTable evts_Cluster4 = readEventLog("consecutive heartbeats", Node.logfilepath + _ClusterLog);
+            if (evts_Cluster4.Rows.Count > 0)
+            {
+
+                _NodeEvents.AppendLine("            Missed Heartbeats Events:  ");
+                for (int i = 0; i < evts_Cluster4.Rows.Count; i++)
+                {
+                    _NodeEvents.AppendLine("                    " + evts_Cluster4.Rows[i][1].ToString());
                 }
                 _NodeEvents.AppendLine("            =============================================");
             }
