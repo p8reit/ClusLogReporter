@@ -546,9 +546,16 @@ namespace ClusterLogReporter
                 return isArgs;
             }
 
-
+            bool first = true;
             foreach (var arg in args)
             {
+
+                if (first && !String.IsNullOrEmpty(arg))
+                {
+                    first = false;
+                    _logsPath = arg;
+                    continue;
+                }
 
                 string[] arg1 = arg.Split('-');
                 switch (arg1[1].ToLower())
