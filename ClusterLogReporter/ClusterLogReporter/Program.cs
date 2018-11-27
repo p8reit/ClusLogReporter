@@ -41,9 +41,13 @@ namespace ClusterLogReporter
         static bool _showVMs = true;
         static bool _ignoreOfflineResource = false;
         static bool _ignoreUnknownResource = false;
-        static bool _skipfilecreate = true;
         static bool _foundGroups = false;
         static bool _foundResources = false;
+
+        //user prams
+        static bool _skipfilecreate = false;
+        static bool _skipresources = false;
+        static bool _skipgroups = false;
 
         //Totals
         static int _resourceCount = 0;
@@ -118,13 +122,17 @@ namespace ClusterLogReporter
             
             //do the actual log work frist
             //Finds Resources not in the online state-- TODO: Improve this apporach to interesting resources
-            Console.Write("Searching for interesting resources...");
-            findInterestingResources();
-
-            Console.Write("Searching for interesting groups...");
-            //Find Groups
-            findInterestingGroups();
-
+            if (_skipresources)
+            {
+                Console.Write("Searching for interesting resources...");
+                findInterestingResources();
+            }
+            if (_skipgroups)
+            {
+                Console.Write("Searching for interesting groups...");
+                //Find Groups
+                findInterestingGroups();
+            }
             Console.Write("Searching for interesting volumes states...");
             //get volume info 
             gatherVolumeInfo();
@@ -135,6 +143,7 @@ namespace ClusterLogReporter
 
             Console.Write("Generating output report to :" + _logsPath);
 
+            
             //stupid stuff to get the cluster name 
             foreach (var node in _NodeInfo)
             {
@@ -161,8 +170,27 @@ namespace ClusterLogReporter
             {
                 writeToLog("       " + node.logfilepath, _w);
             }
+            writeToLog("Nodes processed Count: " + _NodeInfo.Count.ToString(), _w);
+            writeToLog("Nodes found: " , _w);
+            foreach (var node in _NodeInfo)
+            {
+                writeToLog("       " + node.name, _w);
+            }
+
+            writeToLog("Summary:", _w);
+            writeToLog("        " + _GroupCount + " group(s) in a unhealthy state.", _w);
+            writeToLog("        " + _resourceCount + " resource(s) in a unhealthy state.", _w);
+            writeToLog("", _w);
+
+            if (_RuleInfo.Length > 0)
+            {
+                writeToLog("Rules hit:", _w);
+                writeToLog(_RuleInfo.ToString(), _w);
+                writeToLog("", _w);
+            }
+
             writeToLog(" ", _w);
-            writeToLog("Nodes Found: ", _w);
+            writeToLog("Node Timelines: ", _w);
             foreach (var node in _NodeInfo)
             {
                 writeToLog("       " + node.name, _w);
@@ -172,17 +200,6 @@ namespace ClusterLogReporter
                 writeToLog("", _w);
             }
 
-            writeToLog("Summary:", _w);
-            writeToLog("        " + _GroupCount + " group(s) in a unhealthy state.", _w);
-            writeToLog("        " +  _resourceCount + " resource(s) in a unhealthy state.", _w);
-            writeToLog("", _w);
-
-            if (_RuleInfo.Length > 0)
-            {
-                writeToLog("Rules hit:", _w);
-                writeToLog(_RuleInfo.ToString(), _w);
-                writeToLog("", _w);
-            }
             
             writeToLog(" ", _w);
             writeToLog("Volume Information:", _w);
@@ -520,29 +537,47 @@ namespace ClusterLogReporter
             if (args.Length == 0)
             {
                 System.Console.WriteLine("Please enter a path.");
-                System.Console.WriteLine("Usage: Cluslg.exe <pathtologs>");
-                System.Console.WriteLine("Example: Cluslg.exe C:\\LogsFolder");
+                System.Console.WriteLine("Usage: Cluslg.exe <pathtologs> <options>");
+                System.Console.WriteLine("Options: ");
+                System.Console.WriteLine("SR - Skips Resources");
+                System.Console.WriteLine("SG - Skips Groups");
+                System.Console.WriteLine("S  -  Skips File Creation(reprocess logs)");
+                System.Console.WriteLine("Example: Cluslg.exe C:\\LogsFolder -sr -sg -s");
                 return isArgs;
             }
 
-            bool test = String.IsNullOrEmpty(args[0]);
-            if (test != false)
-            {
-                System.Console.WriteLine("Please enter a valid path.");
-                System.Console.WriteLine("Usage: Cluslg.exe <pathtolog>");
-                System.Console.WriteLine("Example: Cluslg.exe C:\\LogsFolder");
-                return isArgs;
-            }
-            else
+
+            foreach (var arg in args)
             {
 
-                _logsPath = args[0];
-                return true;
+                string[] arg1 = arg.Split('-');
+                switch (arg1[1].ToLower())
+                {
+                    case "s":
+                        {
+                            _skipfilecreate = true;
+                            break;
+                        }
+                    case "sg":
+                        {
+                           _skipgroups = true;
+                            break;
+                        }
+                    case "sr":
+                        {
+                            _skipresources = true;
+                            break;
+                        }
+                    default:
+                        _logsPath = arg;
+                        break;
 
+                }
             }
 
+            return true;
         }
-
+            
         static async Task<bool> runTrimLogs(string pathToFile, string logsRoot)
         {
             string CurrentNode = getCurrentNodeFromLog(pathToFile);
