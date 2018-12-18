@@ -118,30 +118,30 @@ namespace ClusterLogReporter
         static void createSumary()
         {
 
-            Console.WriteLine("Gathering Summary Information...");
+            Console.Write("Gathering Summary Information...");
             
             //do the actual log work frist
             //Finds Resources not in the online state-- TODO: Improve this apporach to interesting resources
-            if (!_skipresources)
+            if (_skipresources)
             {
-                Console.WriteLine("Searching for interesting resources...");
+                Console.Write("Searching for interesting resources...");
                 findInterestingResources();
             }
-            if (!_skipgroups)
+            if (_skipgroups)
             {
-                Console.WriteLine("Searching for interesting groups...");
+                Console.Write("Searching for interesting groups...");
                 //Find Groups
                 findInterestingGroups();
             }
-            Console.WriteLine("Searching for interesting volumes states...");
+            Console.Write("Searching for interesting volumes states...");
             //get volume info 
             gatherVolumeInfo();
 
-            Console.WriteLine("Processing Rules...");
+            Console.Write("Processing Rules...");
             //rules processing
             processRules();
 
-            Console.WriteLine("Generating output report to :" + _logsPath);
+            Console.Write("Generating output report to :" + _logsPath);
 
             
             //stupid stuff to get the cluster name 
@@ -365,7 +365,7 @@ namespace ClusterLogReporter
             {
                 // Process the list of files found in the directory.
                 string[] fileEntries = Directory.GetFiles(targetDirectory, "*cluster.log");
-                Console.WriteLine("Found " + fileEntries.Count().ToString() + " cluster logs in root folder.");
+                Console.Write("Found " + fileEntries.Count().ToString() + " cluster logs in root folder.");
                 List<Task<bool>> Tasklist = new List<Task<bool>>();
 
 
@@ -391,7 +391,7 @@ namespace ClusterLogReporter
             }
             catch (System.OutOfMemoryException e)
             {
-                Console.WriteLine("Failed to read files out of memory :( : " + e.HResult.ToString());
+                Console.Write("Failed to read files out of memory :( : " + e.HResult.ToString());
                 //throw;
                 return null;
             }
@@ -446,7 +446,7 @@ namespace ClusterLogReporter
             {
                 // Process the list of files found in the directory.
                 string[] fileEntries = Directory.GetFiles(_NodeInfo[i].logfilepath, "*.csv");
-                Console.WriteLine("Found " + fileEntries.Count().ToString() + " cluster logs in node: " + _NodeInfo[i].name + " folder. \r");
+                Console.Write("Found " + fileEntries.Count().ToString() + " cluster logs in node: " + _NodeInfo[i].name + " folder. \r");
 
                 foreach (var file in fileEntries)
                 {
@@ -537,12 +537,12 @@ namespace ClusterLogReporter
             if (args.Length == 0)
             {
                 System.Console.WriteLine("Please enter a path.");
-                System.Console.WriteLine("Usage: ClusterLogReporter.exe <pathtologs> <options>");
+                System.Console.WriteLine("Usage: Cluslg.exe <pathtologs> <options>");
                 System.Console.WriteLine("Options: ");
                 System.Console.WriteLine("SR - Skips Resources");
                 System.Console.WriteLine("SG - Skips Groups");
                 System.Console.WriteLine("S  -  Skips File Creation(reprocess logs)");
-                System.Console.WriteLine("Example: ClusterLogReporter.exe C:\\LogsFolder -sr -sg -s");
+                System.Console.WriteLine("Example: Cluslg.exe C:\\LogsFolder -sr -sg -s");
                 return isArgs;
             }
 
@@ -553,14 +553,7 @@ namespace ClusterLogReporter
                 if (first && !String.IsNullOrEmpty(arg))
                 {
                     first = false;
-                    if (arg.EndsWith("\\"))
-                    {
-                        _logsPath = arg;
-                    }
-                    else
-                    {
-                        _logsPath = arg + "\\";
-                    }
+                    _logsPath = arg;
                     continue;
                 }
 
@@ -622,7 +615,7 @@ namespace ClusterLogReporter
 
                 //newnode.logfilepath = newlogspath;
                 //_NodeInfo.Add(newnode);
-                Console.WriteLine("Clusterlog for node " + CurrentNode + " being processed and saved to " + newlogspath);
+                Console.Write("Clusterlog for node " + CurrentNode + " being processed and saved to " + newlogspath);
                 File.Copy((logsRoot + "\\Tool.exe"), (newlogspath + "\\Trimlogs.exe"), true);
                 ProcessStartInfo proc = new ProcessStartInfo(newlogspath + "\\Trimlogs.exe");
                 proc.CreateNoWindow = false;
@@ -927,19 +920,6 @@ namespace ClusterLogReporter
                 }
 
                 _VolumeInfo.AppendLine("");
-
-                //CSV Pause events by node 
-
-                DataTable evts_Cluster1 = readEventLog("has entered a paused state", node.logfilepath + _SystemLog);
-                if (evts_Cluster1.Rows.Count > 0)
-                {
-                    _VolumeInfo.AppendLine("    CSV Pause events for " + ": " + node.name + "\r");
-
-                    for (int i = 0; i < evts_Cluster1.Rows.Count; i++)
-                    {
-                        _VolumeInfo.AppendLine("            " + evts_Cluster1.Rows[i][1].ToString());
-                    }
-                }
             }
             _VolumeInfo.AppendLine("================================================== \r");
 
@@ -1018,23 +998,9 @@ namespace ClusterLogReporter
                 }
 
                 _RuleInfo.AppendLine("");
-
-
-                //DataTable evts_Cluster2 = readEventLog("status 339", node.logfilepath + _ClusterLog);
-                //if (evts_Cluster.Rows.Count > 0)
-                //{
-                //    _RuleInfo.AppendLine("Rule Triggered for for node " + node.name + ": Disk changed its persistent state to offline becase it requires admin attention, status 339 \r");
-                //    _RuleInfo.AppendLine("A likely known issue was detected. To fix this issue, ensure the October 18, 2018, cumulative update for Windows Server 2016 (KB4462928) or a later version is installed. \r");
-                //    _RuleInfo.AppendLine("KB link: https://support.microsoft.com/en-in/help/4462487/ \r");
-
-                //    for (int i = 0; i < evts_Cluster2.Rows.Count; i++)
-                //    {
-                //        _RuleInfo.AppendLine("      " + evts_Cluster2.Rows[i][1].ToString());
-                //    }
-                //}
             }
             //_RuleInfo.AppendLine("================================================== \r");
-            // 
+
 
         }
 
