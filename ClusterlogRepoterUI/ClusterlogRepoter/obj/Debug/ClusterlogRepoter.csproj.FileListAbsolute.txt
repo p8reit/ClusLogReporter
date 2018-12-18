@@ -1,0 +1,9 @@
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\bin\Debug\ClusterlogRepoter.exe.config
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\bin\Debug\ClusterlogRepoter.exe
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\bin\Debug\ClusterlogRepoter.pdb
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\obj\Debug\ClusterlogRepoter.Form1.resources
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\obj\Debug\ClusterlogRepoter.Properties.Resources.resources
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\obj\Debug\ClusterlogRepoter.csproj.GenerateResource.cache
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\obj\Debug\ClusterlogRepoter.csproj.CoreCompileInputs.cache
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\obj\Debug\ClusterlogRepoter.exe
+D:\Codes\ClusterlogRepoter\ClusterlogRepoter\obj\Debug\ClusterlogRepoter.pdb
