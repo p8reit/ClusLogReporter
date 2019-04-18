@@ -137,9 +137,9 @@ namespace ClusterLogReporter
             //get volume info 
             gatherVolumeInfo();
 
-            Console.Write("Processing Rules...");
-            //rules processing
-            processRules();
+            //Console.Write("Processing Rules...");
+            ////rules processing
+            //processRules();
 
             Console.Write("Generating output report to :" + _logsPath);
 
