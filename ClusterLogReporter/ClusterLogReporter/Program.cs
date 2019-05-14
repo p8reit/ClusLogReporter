@@ -15,7 +15,7 @@ using System.Web;
 
 
 
-namespace ClusterLogReporter
+namespace LogReporter
 {
     static class Program
     {
@@ -43,6 +43,8 @@ namespace ClusterLogReporter
         static bool _ignoreUnknownResource = false;
         static bool _foundGroups = false;
         static bool _foundResources = false;
+        static bool _Cluster = false;
+        static bool _VSSlogs = false;
 
         //user prams
         static bool _skipfilecreate = false;
@@ -66,56 +68,27 @@ namespace ClusterLogReporter
             if (processArgs(args))
             {
 
-                //collect node info
-                string[] fileEntries = Directory.GetFiles(_logsPath, "*cluster.log");
-                foreach (var item in fileEntries)
+                if (_Cluster)
                 {
-                    string CurrentNode = getCurrentNodeFromLog(item);
-                    if (String.IsNullOrEmpty(CurrentNode))
+                    //collect node info
+                    string[] fileEntries = Directory.GetFiles(_logsPath, "*cluster.log");
+                    if (fileEntries.Length > 0)
                     {
-                        return;
+                        handleClusterLogs(fileEntries);
                     }
-
-                    string newlogspath = (_logsPath + CurrentNode);
-                    Node newnode = new Node();
-                    newnode.name = CurrentNode;
-                    newnode.logfilepath = newlogspath;
-                    _NodeInfo.Add(newnode);
+                }
+                if (_VSSlogs)
+                {
+                    Console.WriteLine("Coming Soon!");
                 }
                 
-
-
-                //validate the cluster is a v2 log and process it with trimlogs
-                //this leaves you will a folder for each node 
-                //with CSV and txt files with data to be poked for info
-                if (!_skipfilecreate)
-                {
-                    populateDataFromClusterLogs(_logsPath);
-                }
                 
-
-                //take the resources csv file from each node and process it to a merged view
-                if (_processedCount > 0 || _skipfilecreate)
-                {
-                    getCSVFilesForNode(); //stub
-
-                    //process recources and find owners and states
-                    //start processing any resources in a none healthy state
-                    if (File.Exists(_logsPath + "ClusterReportlog.txt"))
-                    {
-                        File.Delete(_logsPath + "ClusterReportlog.txt");
-                    }
-                    
-                    using (_w = File.AppendText(_logsPath + "ClusterReportlog.txt"))
-                    {
-                       // processResources();
-                        createSumary();
-                    }
-                }
+                
+                
             }
         }
 
-        static void createSumary()
+        static void createClusterSumary()
         {
 
             Console.Write("Gathering Summary Information...");
@@ -483,6 +456,55 @@ namespace ClusterLogReporter
 
         #region Utils
 
+        static public void handleClusterLogs(string[] fileEntries)
+        {
+            foreach (var item in fileEntries)
+            {
+                string CurrentNode = getCurrentNodeFromLog(item);
+                if (String.IsNullOrEmpty(CurrentNode))
+                {
+                    return;
+                }
+
+                string newlogspath = _logsPath + CurrentNode;
+                Node newnode = new Node();
+                newnode.name = CurrentNode;
+                newnode.logfilepath = newlogspath;
+                _NodeInfo.Add(newnode);
+            }
+
+
+
+            //validate the cluster is a v2 log and process it with trimlogs
+            //this leaves you will a folder for each node 
+            //with CSV and txt files with data to be poked for info
+            if (!_skipfilecreate)
+            {
+                populateDataFromClusterLogs(_logsPath);
+            }
+
+
+            //take the resources csv file from each node and process it to a merged view
+            if (_processedCount > 0 || _skipfilecreate)
+            {
+                getCSVFilesForNode(); //stub
+
+                //process recources and find owners and states
+                //start processing any resources in a none healthy state
+                if (File.Exists(_logsPath + "ClusterReportlog.txt"))
+                {
+                    File.Delete(_logsPath + "ClusterReportlog.txt");
+                }
+
+                using (_w = File.AppendText(_logsPath + "ClusterReportlog.txt"))
+                {
+                    // processResources();
+                    createClusterSumary();
+                }
+            }
+
+            }
+
         public static void ExtractSaveResource(string resource, string path)
         {
             Assembly currentAssembly = Assembly.GetExecutingAssembly();
@@ -537,12 +559,15 @@ namespace ClusterLogReporter
             if (args.Length == 0)
             {
                 System.Console.WriteLine("Please enter a path.");
-                System.Console.WriteLine("Usage: Cluslg.exe <pathtologs> <options>");
+                System.Console.WriteLine("Usage: LogReporter.exe <pathtologs> <options>");
+                System.Console.WriteLine("LogType:");
+                System.Console.WriteLine("Clus - Cluster Logs");
+                System.Console.WriteLine("VSS  - VSS Trace - Coming Soon!");
                 System.Console.WriteLine("Options: ");
                 System.Console.WriteLine("SR - Skips Resources");
                 System.Console.WriteLine("SG - Skips Groups");
                 System.Console.WriteLine("S  -  Skips File Creation(reprocess logs)");
-                System.Console.WriteLine("Example: Cluslg.exe C:\\LogsFolder -sr -sg -s");
+                System.Console.WriteLine("Example: LogReporter.exe -<type> C:\\LogsFolder -sr -sg -s");
                 return isArgs;
             }
 
@@ -573,6 +598,16 @@ namespace ClusterLogReporter
                     case "sr":
                         {
                             _skipresources = true;
+                            break;
+                        }
+                    case "clus":
+                        {
+                            _Cluster = true;
+                            break;
+                        }
+                    case "vss":
+                        {
+                            _VSSlogs = true;
                             break;
                         }
                     default:

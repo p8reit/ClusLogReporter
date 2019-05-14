@@ -7,8 +7,8 @@
     <ProjectGuid>{E6FD7F6E-D302-4633-A82F-7020D6B07F38}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ClusterLogReporter</RootNamespace>
-    <AssemblyName>ClusterLogReporter</AssemblyName>
+    <RootNamespace>LogReporter</RootNamespace>
+    <AssemblyName>LogReporter</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
